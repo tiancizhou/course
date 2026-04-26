@@ -37,8 +37,8 @@ cd /d "%~dp0backend"
 echo.
 echo ========================================
 echo   Server running
-echo   Backend:  http://localhost:8000
-echo   API Docs: http://localhost:8000/docs
+echo   Backend:  http://localhost:6000
+echo   API Docs: http://localhost:6000/docs
 echo ========================================
 echo.
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn main:app --host 0.0.0.0 --port 6000
