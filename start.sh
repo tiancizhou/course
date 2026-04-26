@@ -40,8 +40,8 @@ cd ../backend
 echo
 echo "========================================"
 echo "  服务已启动"
-echo "  后端地址: http://localhost:6000"
-echo "  API文档:  http://localhost:6000/docs"
+echo "  后端地址: http://localhost:8002"
+echo "  API文档:  http://localhost:8002/docs"
 echo "========================================"
 echo
-uvicorn main:app --host 127.0.0.1 --port 6000
+uvicorn main:app --host 127.0.0.1 --port 8002

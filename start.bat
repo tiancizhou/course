@@ -57,13 +57,13 @@ cd /d "%~dp0backend"
 echo.
 echo ========================================
 echo   Server running
-echo   Backend:  http://localhost:6000
-echo   API Docs: http://localhost:6000/docs
+echo   Backend:  http://localhost:8002
+echo   API Docs: http://localhost:8002/docs
 echo   Press Ctrl+C to stop
 echo ========================================
 echo.
 call venv\Scripts\activate.bat
-uvicorn main:app --host 127.0.0.1 --port 6000
+uvicorn main:app --host 127.0.0.1 --port 8002
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] Server failed to start
