@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   { path: '/', name: 'Dashboard', component: () => import('@/views/Dashboard.vue') },
+  { path: '/manage', name: 'Manage', component: () => import('@/views/Manage.vue') },
   { path: '/students', name: 'Students', component: () => import('@/views/Students.vue') },
   { path: '/students/:id', name: 'StudentDetail', component: () => import('@/views/StudentDetail.vue') },
   { path: '/class-slots', name: 'ClassSlots', component: () => import('@/views/ClassSlots.vue') },

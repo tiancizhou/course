@@ -1,135 +1,121 @@
 <template>
-  <div>
-    <el-card shadow="hover">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px">
-        <div style="font-size: 18px; font-weight: bold">课程管理</div>
-        <el-button type="primary" @click="showAddDialog">新增临时课</el-button>
+  <div class="lessons">
+    <div class="filter-row">
+      <el-date-picker v-model="filters.start_date" value-format="YYYY-MM-DD" placeholder="开始" size="small" style="flex:1" />
+      <span style="color:var(--text-hint);margin:0 4px;font-size:12px">~</span>
+      <el-date-picker v-model="filters.end_date" value-format="YYYY-MM-DD" placeholder="结束" size="small" style="flex:1" />
+      <button class="k-btn k-btn-ghost" style="padding:6px 12px;font-size:12px;margin-left:6px" @click="loadData">查询</button>
+    </div>
+    <div class="filter-row" style="margin-top:6px">
+      <div class="tab-pills">
+        <span class="pill" :class="{active:!filters.status}" @click="filters.status='';loadData()">全部</span>
+        <span class="pill" :class="{active:filters.status==='scheduled'}" @click="filters.status='scheduled';loadData()">待上课</span>
+        <span class="pill" :class="{active:filters.status==='completed'}" @click="filters.status='completed';loadData()">已完成</span>
       </div>
+      <button class="k-btn k-btn-mint" style="padding:6px 12px;font-size:12px;margin-left:auto" @click="showAdd=true">+ 临时课</button>
+    </div>
 
-      <div style="margin-bottom: 16px">
-        <el-date-picker v-model="filters.start_date" value-format="YYYY-MM-DD" placeholder="开始日期" style="width: 160px; margin-right: 8px" />
-        <el-date-picker v-model="filters.end_date" value-format="YYYY-MM-DD" placeholder="结束日期" style="width: 160px; margin-right: 8px" />
-        <el-select v-model="filters.status" placeholder="状态" clearable style="width: 120px; margin-right: 8px">
-          <el-option label="待上课" value="scheduled" />
-          <el-option label="已完成" value="completed" />
-          <el-option label="已取消" value="cancelled" />
-        </el-select>
-        <el-button type="primary" @click="loadData">筛选</el-button>
-        <el-button @click="resetFilters">重置</el-button>
+    <div v-for="g in groupedLessons" :key="g.date" class="date-group">
+      <div class="dg-label">{{ g.label }}</div>
+      <div class="dg-card k-card" style="padding:0">
+        <div v-for="l in g.items" :key="l.id" class="dg-item" @click="$router.push(`/lessons/${l.id}/attendance`)">
+          <div class="dg-left">
+            <div class="dg-time">{{ l.start_time?.slice(0,5) }}-{{ l.end_time?.slice(0,5) }}</div>
+            <div class="dg-name">{{ l.slot_name || '临时课' }}</div>
+          </div>
+          <div class="dg-right">
+            <span class="dg-count">{{ l.student_count }}人</span>
+            <span class="lc-status" :class="l.status">{{ statusMap[l.status] }}</span>
+          </div>
+        </div>
       </div>
+    </div>
 
-      <el-table :data="lessons" stripe>
-        <el-table-column label="日期" width="150">
-          <template #default="{ row }">{{ row.lesson_date }} {{ weekdayNames[row.weekday] }}</template>
-        </el-table-column>
-        <el-table-column prop="slot_name" label="班级/时间段" />
-        <el-table-column label="时间" width="160">
-          <template #default="{ row }">{{ row.start_time }} - {{ row.end_time }}</template>
-        </el-table-column>
-        <el-table-column label="类型" width="100">
-          <template #default="{ row }"><el-tag size="small">{{ typeMap[row.lesson_type] }}</el-tag></template>
-        </el-table-column>
-        <el-table-column prop="student_count" label="学生数" width="80" />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 'completed' ? 'success' : row.status === 'cancelled' ? 'info' : 'warning'" size="small">
-              {{ statusMap[row.status] }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="remark" label="备注" show-overflow-tooltip />
-        <el-table-column label="操作" width="220">
-          <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="$router.push(`/lessons/${row.id}/attendance`)">点名</el-button>
-            <el-button type="primary" link size="small" @click="showEditDialog(row)">编辑</el-button>
-            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <div v-if="lessons.length===0" class="empty-card k-card"><div class="empty-text">暂无课程</div></div>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑课程' : '新增临时课'" width="500px">
-      <el-form :model="form" label-width="90px">
-        <el-form-item label="上课日期"><el-date-picker v-model="form.lesson_date" value-format="YYYY-MM-DD" style="width: 100%" @change="updateWeekday" /></el-form-item>
-        <el-form-item label="星期"><el-select v-model="form.weekday" style="width: 100%"><el-option v-for="(name, idx) in weekdayNames" :key="idx" :label="name" :value="idx" /></el-select></el-form-item>
-        <el-form-item label="开始时间"><el-time-picker v-model="form.start_time" value-format="HH:mm:ss" format="HH:mm" style="width: 100%" /></el-form-item>
-        <el-form-item label="结束时间"><el-time-picker v-model="form.end_time" value-format="HH:mm:ss" format="HH:mm" style="width: 100%" /></el-form-item>
-        <el-form-item label="状态" v-if="isEdit"><el-select v-model="form.status" style="width: 100%"><el-option label="待上课" value="scheduled" /><el-option label="已完成" value="completed" /><el-option label="已取消" value="cancelled" /></el-select></el-form-item>
-        <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
+    <el-dialog v-model="showAdd" title="新增临时课" width="340px">
+      <el-form :model="form" label-position="top">
+        <el-form-item label="上课日期"><el-date-picker v-model="form.lesson_date" value-format="YYYY-MM-DD" style="width:100%" @change="updateWeekday" /></el-form-item>
+        <el-form-item label="开始时间"><el-time-picker v-model="form.start_time" value-format="HH:mm:ss" format="HH:mm" style="width:100%" /></el-form-item>
+        <el-form-item label="结束时间"><el-time-picker v-model="form.end_time" value-format="HH:mm:ss" format="HH:mm" style="width:100%" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <el-button @click="showAdd=false">取消</el-button>
+        <el-button type="primary" @click="handleAdd">确定</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { getLessons, createLesson, updateLesson, deleteLesson } from '@/api/lessons'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { getLessons, createLesson } from '@/api/lessons'
 
-const weekdayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-const statusMap: Record<string, string> = { scheduled: '待上课', completed: '已完成', cancelled: '已取消' }
-const typeMap: Record<string, string> = { regular: '固定课', makeup: '补课', temporary: '临时课' }
+const weekdayNames = ['周一','周二','周三','周四','周五','周六','周日']
+const statusMap: Record<string,string> = { scheduled:'待上课', completed:'已完成', cancelled:'已取消' }
+
 const lessons = ref<any[]>([])
-const filters = ref<any>({ start_date: '', end_date: '', status: '' })
-const dialogVisible = ref(false)
-const isEdit = ref(false)
-const editId = ref(0)
-const form = ref<any>({ lesson_date: '', weekday: 0, start_time: '09:00:00', end_time: '10:30:00', lesson_type: 'temporary', status: 'scheduled', remark: '' })
+const filters = ref<any>({ start_date:'', end_date:'', status:'' })
+const showAdd = ref(false)
+const form = ref<any>({ lesson_date:'', weekday:0, start_time:'09:00:00', end_time:'10:30:00', remark:'' })
+
+const groupedLessons = computed(() => {
+  const map = new Map<string,any[]>()
+  for (const l of lessons.value) {
+    if (!map.has(l.lesson_date)) map.set(l.lesson_date, [])
+    map.get(l.lesson_date)!.push(l)
+  }
+  return Array.from(map.entries()).map(([date,items]) => ({
+    date, label:`${date} ${weekdayNames[items[0]?.weekday??0]}`, items
+  }))
+})
 
 async function loadData() {
-  const params: any = {}
-  Object.keys(filters.value).forEach(k => { if (filters.value[k]) params[k] = filters.value[k] })
-  const res: any = await getLessons(params)
-  lessons.value = res.data
+  const params:any = {}
+  Object.keys(filters.value).forEach(k=>{ if(filters.value[k]) params[k]=filters.value[k] })
+  const res:any = await getLessons(params); lessons.value = res.data
 }
 
-function resetFilters() {
-  filters.value = { start_date: '', end_date: '', status: '' }
-  loadData()
-}
+function updateWeekday() { if(!form.value.lesson_date) return; const d=new Date(form.value.lesson_date); form.value.weekday=(d.getDay()+6)%7 }
 
-function showAddDialog() {
-  isEdit.value = false
-  editId.value = 0
-  form.value = { lesson_date: '', weekday: 0, start_time: '09:00:00', end_time: '10:30:00', lesson_type: 'temporary', status: 'scheduled', remark: '' }
-  dialogVisible.value = true
-}
-
-function showEditDialog(row: any) {
-  isEdit.value = true
-  editId.value = row.id
-  form.value = { ...row }
-  dialogVisible.value = true
-}
-
-function updateWeekday() {
-  if (!form.value.lesson_date) return
-  const d = new Date(form.value.lesson_date)
-  form.value.weekday = (d.getDay() + 6) % 7
-}
-
-async function handleSubmit() {
-  if (isEdit.value) {
-    await updateLesson(editId.value, form.value)
-    ElMessage.success('更新成功')
-  } else {
-    await createLesson(form.value)
-    ElMessage.success('新增成功')
-  }
-  dialogVisible.value = false
-  loadData()
-}
-
-async function handleDelete(row: any) {
-  await ElMessageBox.confirm(`确定删除这节课程吗？`, '确认删除', { type: 'warning' })
-  await deleteLesson(row.id)
-  ElMessage.success('删除成功')
-  loadData()
+async function handleAdd() {
+  await createLesson(form.value); ElMessage.success('新增成功 ✓'); showAdd.value=false; loadData()
 }
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+.lessons { padding-bottom:16px; }
+
+.filter-row { display:flex; align-items:center; }
+
+.tab-pills { display:flex; gap:6px; }
+.pill {
+  padding:5px 12px; border-radius:20px; font-size:12px; font-weight:500;
+  color:var(--text-secondary); background:var(--bg-card); cursor:pointer;
+  transition:all 0.2s; border:1.5px solid transparent;
+}
+.pill.active { background:var(--pink-soft); color:var(--pink); border-color:var(--pink); }
+
+.date-group { margin-top:14px; }
+.dg-label { font-size:13px; color:var(--text-secondary); font-weight:600; margin-bottom:6px; }
+.dg-card { overflow:hidden; }
+.dg-item { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #F5F2F8; cursor:pointer; }
+.dg-item:last-child { border-bottom:none; }
+.dg-item:active { background:#FAF7FD; }
+.dg-time { font-size:12px; color:var(--text-hint); }
+.dg-name { font-size:14px; font-weight:500; margin-top:1px; }
+.dg-right { display:flex; align-items:center; gap:6px; }
+.dg-count { font-size:11px; color:var(--text-hint); }
+
+.lc-status { font-size:11px; padding:3px 8px; border-radius:8px; font-weight:500; }
+.lc-status.scheduled { background:var(--cream-soft); color:#B8941E; }
+.lc-status.completed { background:var(--mint-soft); color:#4AA898; }
+.lc-status.cancelled { background:#f2f2f5; color:#aaa; }
+
+.empty-card { text-align:center; padding:28px; margin-top:14px; }
+.empty-text { color:var(--text-hint); font-size:14px; }
+</style>
