@@ -63,7 +63,7 @@ echo   Press Ctrl+C to stop
 echo ========================================
 echo.
 call venv\Scripts\activate.bat
-uvicorn main:app --host 0.0.0.0 --port 6000
+uvicorn main:app --host 127.0.0.1 --port 6000
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] Server failed to start

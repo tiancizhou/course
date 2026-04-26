@@ -44,4 +44,4 @@ echo "  后端地址: http://localhost:6000"
 echo "  API文档:  http://localhost:6000/docs"
 echo "========================================"
 echo
-uvicorn main:app --host 0.0.0.0 --port 6000
+uvicorn main:app --host 127.0.0.1 --port 6000
